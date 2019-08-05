@@ -1,0 +1,18 @@
+apiVersion: aws.pmacik.dev/v1alpha1
+kind: Database
+metadata:
+  name: mydb
+  namespace: default
+  labels:
+    app: mydb
+spec:
+  class: db.t2.micro
+  engine: postgres
+  dbName: mydb
+  name: mydb
+  deleteProtection: false
+  password:
+    key: DB_PASSWORD
+    name: mydb
+  username: postgres
+  size: 10

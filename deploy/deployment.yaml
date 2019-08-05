@@ -1,0 +1,37 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: REPLACE_OPERATOR_NAME
+  namespace: openshift-operators
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: REPLACE_OPERATOR_NAME
+  template:
+    metadata:
+      labels:
+        name: REPLACE_OPERATOR_NAME
+    spec:
+      containers:
+      - image: REPLACE_IMAGE
+        env:
+        - name: AWS_REGION
+          value: us-east-2
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: AWS_ACCESS_KEY_ID
+              name: REPLACE_OPERATOR_NAME
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SECRET_ACCESS_KEY
+              name: REPLACE_OPERATOR_NAME
+        imagePullPolicy: Always
+        name: REPLACE_OPERATOR_NAME
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      serviceAccountName: REPLACE_OPERATOR_NAME
