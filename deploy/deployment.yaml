@@ -17,7 +17,10 @@ spec:
       - image: REPLACE_IMAGE
         env:
         - name: AWS_REGION
-          value: us-east-2
+          valueFrom:
+            secretKeyRef:
+              key: AWS_REGION
+              name: REPLACE_OPERATOR_NAME
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:

@@ -1,0 +1,147 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: REPLACE_OPERATOR_NAME.vREPLACE_VERSION
+  namespace: placeholder
+  annotations:
+    alm-examples: '[{"apiVersion":"aws.pmacik.dev/v1alpha1","kind":"Database","metadata":{"name":"mydb","namespace":"default","labels":{"app":"mydb"}},"spec":{"class":"db.t2.micro","engine":"postgres","dbName":"mydb","name":"mydb","deleteProtection":false,"password":{"key":"DB_PASSWORD","name":"mydb"},"username":"postgres","size":10}}]'
+    capabilities: Basic Install
+    categories: 'Database'
+    containerImage: REPLACE_IMAGE
+    createdAt: 'REPLACE_CREATED_AT'
+    description: The operator that manages AWS RDS databases.
+    repository: https://github.com/operator-backing-service-samples/aws-rds
+spec:
+  displayName: AWS RDS Database
+  description: 'The operator that manages AWS RDS databases.'
+  version: REPLACE_VERSION
+  maintainers:
+    - email: pavel.macik@gmail.com
+      name: Pavel Macik
+  maturity: alpha
+  provider:
+    name: Community
+  links:
+    - name: Source Code
+      url: https://github.com/operator-backing-service-samples/aws-rds
+  labels:
+    name: REPLACE_OPERATOR_NAME
+  selector:
+    matchLabels:
+      name: REPLACE_OPERATOR_NAME
+  # Install
+  installModes:
+    - supported: true
+      type: OwnNamespace
+    - supported: true
+      type: SingleNamespace
+    - supported: false
+      type: MultiNamespace
+    - supported: true
+      type: AllNamespaces
+  install:
+    strategy: deployment
+    spec:
+      # Role(s)
+      clusterPermissions:
+        - serviceAccountName: REPLACE_OPERATOR_NAME
+          rules:
+            - apiGroups:
+                - apiextensions.k8s.io
+              resources:
+                - customresourcedefinitions
+              verbs:
+                - '*'
+            - apiGroups:
+                - aws.pmacik.dev
+              resources:
+                - '*'
+              verbs:
+                - '*'
+            - apiGroups:
+                - ''
+              resources:
+                - secrets
+              verbs:
+                - get
+            - apiGroups:
+                - ''
+              resources:
+                - services
+                - configmaps
+              verbs:
+                - get
+                - create
+                - update
+                - delete
+            - apiGroups:
+                - ''
+              resources:
+                - nodes
+              verbs:
+                - list
+                - watch
+            - apiGroups:
+                - ''
+              resources:
+                - namespaces
+              verbs:
+                - get
+                - list
+                - watch
+      # Deployment(s)
+      deployments:
+        - name: REPLACE_OPERATOR_NAME
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                name: REPLACE_OPERATOR_NAME
+            template:
+              metadata:
+                labels:
+                  name: REPLACE_OPERATOR_NAME
+              spec:
+                serviceAccountName: REPLACE_OPERATOR_NAME
+                containers:
+                  - image: REPLACE_IMAGE
+                    env:
+                      - name: AWS_REGION
+                        valueFrom:
+                          secretKeyRef:
+                            key: AWS_REGION
+                            name: REPLACE_OPERATOR_NAME
+                      - name: AWS_ACCESS_KEY_ID
+                        valueFrom:
+                          secretKeyRef:
+                            key: AWS_ACCESS_KEY_ID
+                            name: REPLACE_OPERATOR_NAME
+                      - name: AWS_SECRET_ACCESS_KEY
+                        valueFrom:
+                          secretKeyRef:
+                            key: AWS_SECRET_ACCESS_KEY
+                            name: REPLACE_OPERATOR_NAME
+                    imagePullPolicy: Always
+                    name: REPLACE_OPERATOR_NAME
+                restartPolicy: Always
+                securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 65534
+  # CRD(s)
+  customresourcedefinitions:
+    owned:
+      - name: databases.aws.pmacik.dev
+        group: aws.pmacik.dev
+        version: v1alpha1
+        kind: Database
+        displayName: AWS RDS Database
+        description: AWS RDS Database description...
+        resources:
+          - kind: Pod
+            version: v1
+          - kind: ConfigMap
+            version: v1
+          - kind: Service
+            version: v1
+        specDescriptors: {}
+        statusDescriptors: {}
