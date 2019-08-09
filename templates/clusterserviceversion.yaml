@@ -137,11 +137,38 @@ spec:
         displayName: AWS RDS Database
         description: AWS RDS Database description...
         resources:
-          - kind: Pod
-            version: v1
           - kind: ConfigMap
             version: v1
           - kind: Service
             version: v1
-        specDescriptors: {}
-        statusDescriptors: {}
+        specDescriptors:
+          - description: Name of the DB user
+            displayName: DB Username
+            path: username
+            x-descriptors:
+              - urn:alm:descriptor:servicebindingrequest:env:attribute
+          - description: DB Name
+            displayName: DB Name
+            path: dbName
+            x-descriptors:
+              - urn:alm:descriptor:servicebindingrequest:env:attribute
+        statusDescriptors:
+          - description: Operator status message
+            displayName: Operator status message
+            path: message
+          - description: Operator status
+            displayName: Operator status
+            path: status
+          - description: Name of the Secret to hold the DB user and password
+            displayName: DB Password Credentials
+            path: dbCredentials
+            x-descriptors:
+              - urn:alm:descriptor:io.kubernetes:Secret
+              - urn:alm:descriptor:servicebindingrequest:env:object:secret:DB_PASSWORD
+          - description: Name of the Config Map to hold the DB connection information
+            displayName: DB Connection config
+            path: dbConnectionConfig
+            x-descriptors:
+              - urn:alm:descriptor:io.kubernetes:ConfigMap
+              - urn:alm:descriptor:servicebindingrequest:env:object:configmap:DB_HOST
+              - urn:alm:descriptor:servicebindingrequest:env:object:configmap:DB_PORT

@@ -85,7 +85,7 @@ func execute(dbprovider string) {
 	}
 
 	// note: if the CRD exist our CreateCRD function is set to exit without an error
-	_, err = crd.CreateCRD(clientset)
+	_, err = crd.EnsureCRD(clientset)
 	if err != nil {
 		panic(err)
 	}
@@ -128,6 +128,7 @@ func execute(dbprovider string) {
 					}
 					return
 				}
+				return
 				status := crd.DatabaseStatus{
 					Message:            "DB Created - creating service",
 					State:              "CreatingService",
@@ -274,11 +275,14 @@ func ensureConfigMap(db *crd.Database, svc *v1.Service) (*v1.ConfigMap, error) {
 func updateStatus(dbName string, status crd.DatabaseStatus, crClient *client.CRClient) error {
 
 	db, err := crClient.Get(dbName)
+	log.Printf("\n\nDB before update:\n\n%v\n\n", db)
 	if err != nil {
 		return err
 	}
 	db.Status = status
-	db, err = crClient.Update(db)
+	log.Printf("\n\nDB during update:\n\n%v\n\n", db)
+	dbNew, err := crClient.Update(db)
+	log.Printf("\n\nDB after update:\n\n%v\n\n", dbNew)
 	if err != nil {
 		return err
 	}

@@ -20,11 +20,11 @@ const (
 	FullCRDName string = "databases." + CRDGroup
 )
 
-// CreateCRD creates the CRD resource, ignore error if it already exists
-func CreateCRD(clientSet apiextcs.Interface) (*apiextv1beta1.CustomResourceDefinition, error) {
+// EnsureCRD creates the CRD resource if it does not exist, or returns the one that it's found
+func EnsureCRD(clientSet apiextcs.Interface) (*apiextv1beta1.CustomResourceDefinition, error) {
 	log.Printf("Ensuring CRD is created...")
 
-	crd, err := findCRD(FullCRDName, clientSet)
+	crd, err := findCRD(clientSet)
 
 	if err != nil {
 		log.Printf("CRD not found: %v", err)
@@ -52,7 +52,7 @@ func CreateCRD(clientSet apiextcs.Interface) (*apiextv1beta1.CustomResourceDefin
 		}
 		log.Printf("CRD Created, waiting for it to be available...")
 		for {
-			c, wErr := findCRD(FullCRDName, clientSet)
+			c, wErr := findCRD(clientSet)
 			if wErr == nil {
 				crd = c
 				break
@@ -66,8 +66,13 @@ func CreateCRD(clientSet apiextcs.Interface) (*apiextv1beta1.CustomResourceDefin
 	return crd, nil
 }
 
-func findCRD(fullCRDName string, clientSet apiextcs.Interface) (*apiextv1beta1.CustomResourceDefinition, error) {
-	crd, err := clientSet.ApiextensionsV1beta1().CustomResourceDefinitions().Get(fullCRDName, meta_v1.GetOptions{})
+func findCRD(clientSet apiextcs.Interface) (*apiextv1beta1.CustomResourceDefinition, error) {
+	crd, err := clientSet.ApiextensionsV1beta1().CustomResourceDefinitions().Get(FullCRDName, meta_v1.GetOptions{
+		TypeMeta: meta_v1.TypeMeta{
+			Kind:       CRDKind,
+			APIVersion: CRDGroup + "/" + CRDVersion,
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +84,7 @@ type Database struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
 	Spec               DatabaseSpec   `json:"spec"`
-	Status             DatabaseStatus `json:"status,omitempty"`
+	Status             DatabaseStatus `json:"status"`
 }
 
 // DatabaseSpec main structure describing the database instance
@@ -105,8 +110,8 @@ type PasswordSecret struct {
 }
 
 type DatabaseStatus struct {
-	State              string `json:"state,omitempty" description:"State of the deploy"`
-	Message            string `json:"message,omitempty" description:"Detailed message around the state"`
+	State              string `json:"state" description:"State of the deploy"`
+	Message            string `json:"message" description:"Detailed message around the state"`
 	DBConnectionConfig string `json:"dbConnectionConfig" description:"Name of a Config Map with DB Connection Configuration"`
 	DBCredentials      string `json:"dbCredentials" description:"Name of the secret to hold DB Credentials"`
 }
