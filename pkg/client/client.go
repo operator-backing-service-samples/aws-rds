@@ -1,6 +1,8 @@
 package client
 
 import (
+	"log"
+
 	"github.com/operator-backing-service-samples/aws-rds/pkg/crd"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,9 +36,14 @@ func (crClient *CRClient) Create(obj *crd.Database) (*crd.Database, error) {
 
 func (crClient *CRClient) Update(obj *crd.Database) (*crd.Database, error) {
 	var result crd.Database
-	err := crClient.restClient.Put().
+	log.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!! %v", obj.Status)
+
+	request := crClient.restClient.Put().
 		Namespace(crClient.ns).Resource(crClient.plural).Name(obj.Name).
-		Body(obj).Do().Into(&result)
+		Body(obj)
+	log.Printf("\n\n\tPUT REQUEST:\n\n%v\n\n", request)
+	err := request.Do().Into(&result)
+	log.Printf("\n\n\tPUT RESPONS:\n\n%v\n\n", result)
 	return &result, err
 }
 
@@ -49,9 +56,12 @@ func (crClient *CRClient) Delete(name string, options *meta_v1.DeleteOptions) er
 
 func (crClient *CRClient) Get(name string) (*crd.Database, error) {
 	var result crd.Database
-	err := crClient.restClient.Get().
+	request := crClient.restClient.Get().
 		Namespace(crClient.ns).Resource(crClient.plural).
-		Name(name).Do().Into(&result)
+		Name(name)
+	log.Printf("\n\n\tGET REQUEST:\n\n%v\n\n", request)
+	err := request.Do().Into(&result)
+	log.Printf("\n\n\tGET RESPONSE:\n\n%v\n\n", result)
 	return &result, err
 }
 

@@ -140,6 +140,7 @@ build-operator-csv: get-timestamp
 		sed -e 's,REPLACE_VERSION,$(TAG),g' | \
 		sed -e 's,REPLACE_IMAGE,$(IMAGE),g' | \
 		sed -e 's,REPLACE_CREATED_AT,$(NICE_READABLE_TIMESTAMP),g' | \
+		sed -e 's,REPLACE_CSV_NAMESPACE,placeholder,g' | \
 		sed -e 's,REPLACE_PACKAGE,$(OPERATOR_NAME),g' > $(MANIFESTS_DIR)/$(OPERATOR_NAME)-v$(TAG).clusterserviceversion.yaml
 
 .PHONY: build-operator-olm-package
@@ -148,8 +149,8 @@ build-operator-olm-package: get-timestamp build-operator-csv
 	$(Q)mkdir -p $(MANIFESTS_DIR)
 	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/package.yaml | \
 		sed -e 's,REPLACE_VERSION,$(TAG),g' | \
-		sed -e 's,REPLACE_PACKAGE,$(OPERATOR_NAME),g' > $(MANIFESTS_DIR)/database.package.yaml
-	$(Q)cp -f deploy/crd.yaml $(MANIFESTS_DIR)/crd.yaml
+		sed -e 's,REPLACE_PACKAGE,$(OPERATOR_NAME),g' > $(MANIFESTS_DIR)/$(OPERATOR_NAME).package.yaml
+	$(Q)cp -f deploy/crd.yaml $(MANIFESTS_DIR)/aws-v1alpha1-rdsdatabase.crd.yaml
 	$(Q)operator-courier verify --ui_validate_io $(MANIFESTS_DIR)
 
 .PHONY: push-operator-olm-package
@@ -190,12 +191,18 @@ install-olm-operator-source:
 	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/operator-source.yaml | \
 		sed -e 's,REPLACE_NAMESPACE,$(QUAY_USERNAME),g' | oc apply -f -
 
+.PHONY: uninstall-olm-operator-source
+## Delete OperatorSource for operator
+uninstall-olm-operator-source:
+	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/operator-source.yaml | \
+		sed -e 's,REPLACE_NAMESPACE,$(QUAY_USERNAME),g' | oc delete -f -
+
 .PHONY: deploy-operator
 ## Create deployment for operator
-deploy-operator:
-	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/deployment.yaml | \
-		sed -e 's,REPLACE_IMAGE,$(IMAGE),g' | oc apply -f -
-
+deploy-operator: install-operator build-operator-csv
+	#$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/deployment.yaml | \
+	#	sed -e 's,REPLACE_IMAGE,$(IMAGE),g' | oc apply -f -
+	$(Q) sed -e 's,namespace: placeholder,namespace: openshift-operators,g' $(MANIFESTS_DIR)/$(OPERATOR_NAME)-v$(TAG).clusterserviceversion.yaml | oc apply -f -
 
 .PHONY: redeploy-operator
 ## Scale operator's deployment to 0 and back to 1 to re-deploy it
@@ -205,9 +212,10 @@ redeploy-operator:
 
 .PHONY: undeploy-operator
 ## Delete deployment for operator
-undeploy-operator:
-	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/deployment.yaml | \
-		sed -e 's,REPLACE_IMAGE,$(IMAGE),g' | oc delete -f -
+undeploy-operator: uninstall-operator
+	#$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/deployment.yaml | \
+	#	sed -e 's,REPLACE_IMAGE,$(IMAGE),g' | oc delete -f -
+	$(Q)-sed -e 's,namespace: placeholder,namespace: openshift-operators,g' $(MANIFESTS_DIR)/$(OPERATOR_NAME)-v$(TAG).clusterserviceversion.yaml | oc delete -f -
 
 .PHONY: deploy-db
 ## Create database secret and deployment
