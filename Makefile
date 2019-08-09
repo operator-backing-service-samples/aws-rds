@@ -113,6 +113,8 @@ else
 get-timestamp: refresh-timestamp
 endif
 	$(eval export TIMESTAMP = $(shell cat $(BUILD_TIMESTAMP)))
+	$(eval export READABLE_TIMESTAMP := $(shell date --date="@$(TIMESTAMP)" '+%Y%m%d%H%M%S'))
+	$(eval export NICE_READABLE_TIMESTAMP := $(shell date --date="@$(TIMESTAMP)" '+%Y-%m-%d %H:%M:%S'))
 
 .PHONY: build
 ## Compile the operator for Linux/AMD64
@@ -137,13 +139,12 @@ build-operator-csv: get-timestamp
 	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/clusterserviceversion.yaml | \
 		sed -e 's,REPLACE_VERSION,$(TAG),g' | \
 		sed -e 's,REPLACE_IMAGE,$(IMAGE),g' | \
-		sed -e 's,REPLACE_CREATED_AT,$(CREATION_TIMESTAMP),g' | \
+		sed -e 's,REPLACE_CREATED_AT,$(NICE_READABLE_TIMESTAMP),g' | \
 		sed -e 's,REPLACE_PACKAGE,$(OPERATOR_NAME),g' > $(MANIFESTS_DIR)/$(OPERATOR_NAME)-v$(TAG).clusterserviceversion.yaml
 
 .PHONY: build-operator-olm-package
 ## Build the operator package for OpenShift Marketplace
 build-operator-olm-package: get-timestamp build-operator-csv
-	$(eval CREATION_TIMESTAMP := $(shell date --date="@$(TIMESTAMP)" '+%Y-%m-%d %H:%M:%S'))
 	$(Q)mkdir -p $(MANIFESTS_DIR)
 	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/package.yaml | \
 		sed -e 's,REPLACE_VERSION,$(TAG),g' | \
@@ -154,7 +155,6 @@ build-operator-olm-package: get-timestamp build-operator-csv
 .PHONY: push-operator-olm-package
 ## Pushes the operator package to Quay.io app registry
 push-operator-olm-package: get-timestamp
-	$(eval READABLE_TIMESTAMP := $(shell date --date="@$(TIMESTAMP)" '+%Y%m%d%H%M%S'))
 	@$(eval QUAY_API_TOKEN := $(shell curl -sH "Content-Type: application/json" -XPOST https://quay.io/cnr/api/v1/users/login -d '{"user":{"username":"'${QUAY_USERNAME}'","password":"'${QUAY_PASSWORD}'"}}' | jq -r '.token'))
 	@echo "Pushing operator package $(QUAY_USERNAME)/$(OPERATOR_NAME):$(TAG)-$(READABLE_TIMESTAMP)"
 	@operator-courier $(VERBOSE_FLAG) push $(MANIFESTS_DIR) $(QUAY_USERNAME) $(OPERATOR_NAME) $(TAG)-$(READABLE_TIMESTAMP) "$(QUAY_API_TOKEN)"
