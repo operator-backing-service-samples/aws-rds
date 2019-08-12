@@ -51,6 +51,12 @@ TEMPLATES_DIR := ./templates
 MANIFESTS_DIR := ./$(TMP_DIR)/manifests
 BUILD_TIMESTAMP = build-timestamp
 
+ifeq ($(RELEASE_OPERATOR), true)
+	APPR_NAMESPACE ?= $(QUAY_USERNAME)
+else
+	APPR_NAMESPACE ?= $(QUAY_USERNAME)-testing
+endif
+
 .DEFAULT_GOAL := help
 
 ## -- Utility targets --
@@ -150,15 +156,15 @@ build-operator-olm-package: get-timestamp build-operator-csv
 	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/package.yaml | \
 		sed -e 's,REPLACE_VERSION,$(TAG),g' | \
 		sed -e 's,REPLACE_PACKAGE,$(OPERATOR_NAME),g' > $(MANIFESTS_DIR)/$(OPERATOR_NAME).package.yaml
-	$(Q)cp -f deploy/crd.yaml $(MANIFESTS_DIR)/aws-v1alpha1-rdsdatabase.crd.yaml
+	$(Q)cp -f $(TEMPLATES_DIR)/crd.yaml $(MANIFESTS_DIR)/aws-v1alpha1-rdsdatabases.crd.yaml
 	$(Q)operator-courier verify --ui_validate_io $(MANIFESTS_DIR)
 
 .PHONY: push-operator-olm-package
 ## Pushes the operator package to Quay.io app registry
 push-operator-olm-package: get-timestamp
 	@$(eval QUAY_API_TOKEN := $(shell curl -sH "Content-Type: application/json" -XPOST https://quay.io/cnr/api/v1/users/login -d '{"user":{"username":"'${QUAY_USERNAME}'","password":"'${QUAY_PASSWORD}'"}}' | jq -r '.token'))
-	@echo "Pushing operator package $(QUAY_USERNAME)/$(OPERATOR_NAME):$(TAG)-$(READABLE_TIMESTAMP)"
-	@operator-courier $(VERBOSE_FLAG) push $(MANIFESTS_DIR) $(QUAY_USERNAME) $(OPERATOR_NAME) $(TAG)-$(READABLE_TIMESTAMP) "$(QUAY_API_TOKEN)"
+	@echo "Pushing operator package $(APPR_NAMESPACE)/$(OPERATOR_NAME):$(TAG)-$(READABLE_TIMESTAMP)"
+	@operator-courier $(VERBOSE_FLAG) push $(MANIFESTS_DIR) $(APPR_NAMESPACE) $(OPERATOR_NAME) $(TAG)-$(READABLE_TIMESTAMP) "$(QUAY_API_TOKEN)"
 
 .PHONY: clean
 ## Clean up 
@@ -167,40 +173,48 @@ clean:
 
 ## -- Install/Delete targets --
 
+.PHONY: install-operator-secrets
+## Create secret for operator
+install-operator-secrets:
+	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/aws.secret.yaml | oc apply -f -
+
+.PHONY: uninstall-operator-secrets
+## Delete secret for operator
+uninstall-operator-secrets:
+	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/aws.secret.yaml | oc delete -f -
+
 .PHONY: install-operator
 ## Create secret, role, account and crd for operator
-install-operator:
-	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/operator-cluster-role.yaml | oc apply -f -
-	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/operator-service-account.yaml | oc apply -f -
-	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/operator-cluster-role-binding.yaml | oc apply -f -
-	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/aws.secret.yaml | oc apply -f -
-	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/crd.yaml | oc apply -f -
+install-operator: install-operator-secrets
+	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/operator-cluster-role.yaml | oc apply -f -
+	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/operator-service-account.yaml | oc apply -f -
+	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/operator-cluster-role-binding.yaml | oc apply -f -
+	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/crd.yaml | oc apply -f -
 
 .PHONY: uninstall-operator
 ## Delete secret, role, account and crd for operator
-uninstall-operator:
-	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/operator-cluster-role.yaml | oc delete -f -
-	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/operator-service-account.yaml | oc delete -f -
-	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/operator-cluster-role-binding.yaml | oc delete -f -
-	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/aws.secret.yaml | oc delete -f -
-	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/crd.yaml | oc delete -f -
+uninstall-operator: 
+	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/operator-cluster-role.yaml | oc delete -f -
+	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/operator-service-account.yaml | oc delete -f -
+	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/operator-cluster-role-binding.yaml | oc delete -f -
+	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/crd.yaml | oc delete -f -
 
 .PHONY: install-olm-operator-source
 ## Create OperatorSource for operator
 install-olm-operator-source:
-	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/operator-source.yaml | \
-		sed -e 's,REPLACE_NAMESPACE,$(QUAY_USERNAME),g' | oc apply -f -
+	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/operator-source.yaml | \
+		sed -e 's,REPLACE_NAMESPACE,$(APPR_NAMESPACE),g' | oc apply -f -
 
 .PHONY: uninstall-olm-operator-source
 ## Delete OperatorSource for operator
 uninstall-olm-operator-source:
-	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/operator-source.yaml | \
-		sed -e 's,REPLACE_NAMESPACE,$(QUAY_USERNAME),g' | oc delete -f -
+	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/operator-source.yaml | \
+		sed -e 's,REPLACE_NAMESPACE,$(APPR_NAMESPACE),g' | oc delete -f -
 
 .PHONY: deploy-operator
 ## Create deployment for operator
 deploy-operator: install-operator build-operator-csv
-	#$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/deployment.yaml | \
+	#$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/deployment.yaml | \
 	#	sed -e 's,REPLACE_IMAGE,$(IMAGE),g' | oc apply -f -
 	$(Q) sed -e 's,namespace: placeholder,namespace: openshift-operators,g' $(MANIFESTS_DIR)/$(OPERATOR_NAME)-v$(TAG).clusterserviceversion.yaml | oc apply -f -
 
@@ -213,21 +227,21 @@ redeploy-operator:
 .PHONY: undeploy-operator
 ## Delete deployment for operator
 undeploy-operator: uninstall-operator
-	#$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/deployment.yaml | \
+	#$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/deployment.yaml | \
 	#	sed -e 's,REPLACE_IMAGE,$(IMAGE),g' | oc delete -f -
 	$(Q)-sed -e 's,namespace: placeholder,namespace: openshift-operators,g' $(MANIFESTS_DIR)/$(OPERATOR_NAME)-v$(TAG).clusterserviceversion.yaml | oc delete -f -
 
 .PHONY: deploy-db
 ## Create database secret and deployment
 deploy-db:
-	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/db.secret.yaml | oc apply -f -
-	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/db.yaml | oc apply -f -
+	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/db.secret.yaml | oc apply -f -
+	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/db.yaml | oc apply -f -
 
 .PHONY: undeploy-db
 ## Delete database secret, deployment and service
 undeploy-db:
-	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/db.yaml | oc delete -f -
-	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' deploy/db.secret.yaml | oc delete -f -
+	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/db.yaml | oc delete -f -
+	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/db.secret.yaml | oc delete -f -
 
 .PHONY: undeploy-all
 ## Undeploy operator and related assets

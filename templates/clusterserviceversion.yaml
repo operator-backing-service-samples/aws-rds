@@ -4,7 +4,7 @@ metadata:
   name: REPLACE_OPERATOR_NAME.vREPLACE_VERSION
   namespace: placeholder
   annotations:
-    alm-examples: '[{"apiVersion":"aws.pmacik.dev/v1alpha1","kind":"Database","metadata":{"name":"mydb","namespace":"default","labels":{"app":"mydb"}},"spec":{"class":"db.t2.micro","engine":"postgres","dbName":"mydb","name":"mydb","deleteProtection":false,"password":{"key":"DB_PASSWORD","name":"mydb"},"username":"postgres","size":10}}]'
+    alm-examples: '[{"apiVersion":"aws.pmacik.dev/v1alpha1","kind":"RDSDatabase","metadata":{"name":"mydb","namespace":"default","labels":{"app":"mydb"}},"spec":{"class":"db.t2.micro","engine":"postgres","dbName":"mydb","name":"mydb","deleteProtection":false,"password":{"key":"DB_PASSWORD","name":"mydb"},"username":"postgres","size":10}}]'
     capabilities: Basic Install
     categories: 'Database'
     containerImage: REPLACE_IMAGE
@@ -13,7 +13,30 @@ metadata:
     repository: https://github.com/operator-backing-service-samples/aws-rds
 spec:
   displayName: AWS RDS Database
-  description: 'The operator that manages AWS RDS databases.'
+  description: |
+      The operator that manages AWS RDS databases
+
+      This operator requires AWS credentials in order to be able to work with AWS.
+      To allow the operator to access AWS create the following secret prior operator instalation
+
+      ```yaml
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: REPLACE_OPERATOR_NAME
+        namespace: openshift-operators
+      type: Opaque
+      data:
+        AWS_ACCESS_KEY_ID: ...
+        AWS_SECRET_ACCESS_KEY: ...
+        AWS_REGION: dXMtZWFzdC0y #(BASE64:us-east-2)
+      ```
+
+      or by running the `oc` tool
+
+      ```sh
+      oc create secret generic REPLACE_OPERATOR_NAME --from-literal=AWS_ACCESS_KEY_ID=... --from-literal=AWS_SECRET_ACCESS_KEY=... --from-literal=AWS_REGION=us-east-2 -n openshift-operators
+      ```
   version: REPLACE_VERSION
   maintainers:
     - email: pavel.macik@gmail.com
@@ -130,16 +153,14 @@ spec:
   # CRD(s)
   customresourcedefinitions:
     owned:
-      - name: databases.aws.pmacik.dev
+      - name: rdsdatabases.aws.pmacik.dev
         group: aws.pmacik.dev
         version: v1alpha1
-        kind: Database
+        kind: RDSDatabase
         displayName: AWS RDS Database
         description: AWS RDS Database description...
         resources:
           - kind: ConfigMap
-            version: v1
-          - kind: Service
             version: v1
         specDescriptors:
           - description: Name of the DB user

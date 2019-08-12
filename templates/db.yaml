@@ -1,5 +1,5 @@
 apiVersion: aws.pmacik.dev/v1alpha1
-kind: Database
+kind: RDSDatabase
 metadata:
   name: mydb
   namespace: default
@@ -16,3 +16,4 @@ spec:
     name: mydb
   username: postgres
   size: 10
+  

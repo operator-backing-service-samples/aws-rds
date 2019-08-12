@@ -10,10 +10,10 @@ import (
 )
 
 func TestMarshal(t *testing.T) {
-	d := Database{
+	d := RDSDatabase{
 		ObjectMeta: meta_v1.ObjectMeta{Name: "my_db", Namespace: "default"},
-		TypeMeta:   meta_v1.TypeMeta{Kind: "Database", APIVersion: "k8s.io/v1"},
-		Spec: DatabaseSpec{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "RDSDatabase", APIVersion: "k8s.io/v1"},
+		Spec: RDSDatabaseSpec{
 			BackupRetentionPeriod: 10,
 			Class:                 "db.t2.micro",
 			DBName:                "database_name",

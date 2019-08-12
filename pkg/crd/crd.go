@@ -13,11 +13,13 @@ import (
 )
 
 const (
-	CRDKind     string = "Database"
-	CRDPlural   string = "databases"
-	CRDGroup    string = "aws.pmacik.dev"
-	CRDVersion  string = "v1alpha1"
-	FullCRDName string = "databases." + CRDGroup
+	CRDKind      string = "RDSDatabase"
+	CRDSingular  string = "rdsdatabase"
+	CRDPlural    string = CRDSingular + "s"
+	CRDGroup     string = "aws.pmacik.dev"
+	CRDVersion   string = "v1alpha1"
+	ShortCRDName string = "rdsdb"
+	FullCRDName  string = CRDPlural + "." + CRDGroup
 )
 
 // EnsureCRD creates the CRD resource if it does not exist, or returns the one that it's found
@@ -36,12 +38,20 @@ func EnsureCRD(clientSet apiextcs.Interface) (*apiextv1beta1.CustomResourceDefin
 				Version: CRDVersion,
 				Scope:   apiextv1beta1.NamespaceScoped,
 				Names: apiextv1beta1.CustomResourceDefinitionNames{
+					Singular:   CRDSingular,
 					Plural:     CRDPlural,
 					Kind:       CRDKind,
-					ShortNames: []string{"rds"},
+					ShortNames: []string{ShortCRDName},
 				},
 				Subresources: &apiextv1beta1.CustomResourceSubresources{
 					Status: &apiextv1beta1.CustomResourceSubresourceStatus{},
+				},
+				Versions: []apiextv1beta1.CustomResourceDefinitionVersion{
+					apiextv1beta1.CustomResourceDefinitionVersion{
+						Name:    CRDVersion,
+						Served:  true,
+						Storage: true,
+					},
 				},
 			},
 		}
@@ -50,28 +60,26 @@ func EnsureCRD(clientSet apiextcs.Interface) (*apiextv1beta1.CustomResourceDefin
 			log.Printf("Failed to create CRD: %v", err)
 			return nil, err
 		}
-		log.Printf("CRD Created, waiting for it to be available...")
-		for {
-			c, wErr := findCRD(clientSet)
-			if wErr == nil {
-				crd = c
-				break
-			}
-			log.Printf("CRD not available, yet - trying again.")
-		}
-		log.Println("CRD Available.")
-		return crd, nil
 	}
-	log.Println("CRD Found")
+	log.Printf("CRD Found, waiting for it to be available...")
+	for {
+		c, wErr := findCRD(clientSet)
+		if wErr == nil {
+			crd = c
+			break
+		}
+		log.Printf("CRD not available, yet - trying again.")
+	}
+	log.Println("CRD Available.")
 	return crd, nil
 }
 
 func findCRD(clientSet apiextcs.Interface) (*apiextv1beta1.CustomResourceDefinition, error) {
 	crd, err := clientSet.ApiextensionsV1beta1().CustomResourceDefinitions().Get(FullCRDName, meta_v1.GetOptions{
-		TypeMeta: meta_v1.TypeMeta{
+		/*TypeMeta: meta_v1.TypeMeta{
 			Kind:       CRDKind,
 			APIVersion: CRDGroup + "/" + CRDVersion,
-		},
+		},*/
 	})
 	if err != nil {
 		return nil, err
@@ -79,16 +87,16 @@ func findCRD(clientSet apiextcs.Interface) (*apiextv1beta1.CustomResourceDefinit
 	return crd, nil
 }
 
-// Database is the definition of our CRD Database
-type Database struct {
+// RDSDatabase is the definition of our CRD RDSDatabase
+type RDSDatabase struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               DatabaseSpec   `json:"spec"`
-	Status             DatabaseStatus `json:"status"`
+	Spec               RDSDatabaseSpec   `json:"spec"`
+	Status             RDSDatabaseStatus `json:"status"`
 }
 
-// DatabaseSpec main structure describing the database instance
-type DatabaseSpec struct {
+// RDSDatabaseSpec main structure describing the database instance
+type RDSDatabaseSpec struct {
 	Username              string         `json:"username"`
 	Password              PasswordSecret `json:"password"`
 	DBName                string         `json:"dbName"`
@@ -109,33 +117,25 @@ type PasswordSecret struct {
 	Key  string `json:"key"`
 }
 
-type DatabaseStatus struct {
+type RDSDatabaseStatus struct {
 	State              string `json:"state" description:"State of the deploy"`
 	Message            string `json:"message" description:"Detailed message around the state"`
 	DBConnectionConfig string `json:"dbConnectionConfig" description:"Name of a Config Map with DB Connection Configuration"`
 	DBCredentials      string `json:"dbCredentials" description:"Name of the secret to hold DB Credentials"`
 }
 
-type DatabaseList struct {
+type RDSDatabaseList struct {
 	meta_v1.TypeMeta `json:",inline"`
 	meta_v1.ListMeta `json:"metadata"`
-	Items            []Database `json:"items"`
-}
-
-func (d *Database) DeepCopyObject() runtime.Object {
-	return d
-}
-
-func (d *DatabaseList) DeepCopyObject() runtime.Object {
-	return d
+	Items            []RDSDatabase `json:"items"`
 }
 
 var SchemeGroupVersion = schema.GroupVersion{Group: CRDGroup, Version: CRDVersion}
 
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&Database{},
-		&DatabaseList{},
+		&RDSDatabase{},
+		&RDSDatabaseList{},
 	)
 	meta_v1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

@@ -9,8 +9,8 @@ import (
 )
 
 func TestConvertSpecToInput(t *testing.T) {
-	db := &crd.Database{
-		Spec: crd.DatabaseSpec{
+	db := &crd.RDSDatabase{
+		Spec: crd.RDSDatabaseSpec{
 			DBName:             "mydb",
 			Engine:             "postgres",
 			Username:           "myuser",
