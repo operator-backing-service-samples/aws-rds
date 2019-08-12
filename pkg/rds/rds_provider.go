@@ -12,8 +12,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	"github.com/pkg/errors"
 	"github.com/operator-backing-service-samples/aws-rds/pkg/crd"
+	"github.com/operator-backing-service-samples/aws-rds/pkg/kube"
 	"github.com/operator-backing-service-samples/aws-rds/pkg/provider"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -22,11 +24,10 @@ type RDS struct {
 	EC2             *ec2.EC2
 	Subnets         []string
 	SecurityGroups  []string
-	ServiceProvider provider.ServiceProvider
 }
 
 // New compiles a new RDS struct based on the CR
-func New(db *crd.Database, kc *kubernetes.Clientset) (*RDS, error) {
+func New(db *crd.RDSDatabase, kc *kubernetes.Clientset) (*RDS, error) {
 	ec2client, err := ec2client(kc)
 	if err != nil {
 		log.Fatal("unable to create a client for EC2 ", err)
@@ -49,9 +50,9 @@ func New(db *crd.Database, kc *kubernetes.Clientset) (*RDS, error) {
 	return &r, nil
 }
 
-// CreateDatabase creates a database from the CRD database object, is also ensures that the correct
+// CreateRDSDatabase creates a database from the CRD database object, is also ensures that the correct
 // subnets are created for the database so we can access it
-func (r *RDS) CreateDatabase(db *crd.Database) (*provider.DBEndpoint, error) {
+func (r *RDS) CreateRDSDatabase(db *crd.RDSDatabase) (*provider.DBEndpoint, error) {
 	// Ensure that the subnets for the DB is create or updated
 	log.Println("Trying to find the correct subnets")
 	subnetName, err := r.ensureSubnets(db)
@@ -98,7 +99,7 @@ func (r *RDS) CreateDatabase(db *crd.Database) (*provider.DBEndpoint, error) {
 }
 
 // ensureSubnets is ensuring that we have created or updated the subnet according to the data from the CRD object
-func (r *RDS) ensureSubnets(db *crd.Database) (string, error) {
+func (r *RDS) ensureSubnets(db *crd.RDSDatabase) (string, error) {
 	if len(r.Subnets) == 0 {
 		log.Println("Error: unable to continue due to lack of subnets, perhaps we couldn't lookup the subnets")
 	}
@@ -141,8 +142,8 @@ func getEndpoint(dbName *string, svc *rds.RDS) (*rds.Endpoint, error) {
 	return rdsdb.Endpoint, nil
 }
 
-// DeleteDatabase attempts to delete the RDS database
-func (r *RDS) DeleteDatabase(db *crd.Database) error {
+// DeleteRDSDatabase attempts to delete the RDS database
+func (r *RDS) DeleteRDSDatabase(db *crd.RDSDatabase) error {
 	if db.Spec.DeleteProtection {
 		log.Printf("Trying to delete a %v in %v which is a deleted protected database", db.Name, db.Namespace)
 		return nil
@@ -188,10 +189,10 @@ func (r *RDS) DeleteDatabase(db *crd.Database) error {
 func (r *RDS) rdsclient() *rds.RDS {
 	return rds.New(r.EC2.Config)
 }
-func dbidentifier(v *crd.Database) string {
+func dbidentifier(v *crd.RDSDatabase) string {
 	return v.Name + "-" + v.Namespace
 }
-func convertSpecToInput(v *crd.Database, subnetName string, securityGroups []string, password string) *rds.CreateDBInstanceInput {
+func convertSpecToInput(v *crd.RDSDatabase, subnetName string, securityGroups []string, password string) *rds.CreateDBInstanceInput {
 	input := &rds.CreateDBInstanceInput{
 		DBName:                aws.String(v.Spec.DBName),
 		AllocatedStorage:      aws.Int64(v.Spec.Size),
@@ -367,4 +368,16 @@ func ec2client(kubectl *kubernetes.Clientset) (*ec2.EC2, error) {
 	cfg.HTTPClient.Timeout = 5 * time.Second
 	return ec2.New(cfg), nil
 
+}
+
+func (k *RDS) GetSecret(namespace string, name string) (*v1.Secret, error) {
+	kubectl, err := kube.Client()
+	if err != nil {
+		return nil, err
+	}
+	secret, err := kubectl.CoreV1().Secrets(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("unable to fetch secret %v", name))
+	}
+	return secret, nil
 }
