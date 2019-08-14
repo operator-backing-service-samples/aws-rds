@@ -10,7 +10,7 @@ spec:
   engine: postgres
   dbName: mydb
   name: mydb
-  deleteProtection: false
+  deleteProtection: true
   password:
     key: DB_PASSWORD
     name: mydb

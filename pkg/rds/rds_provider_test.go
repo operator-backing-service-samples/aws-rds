@@ -22,6 +22,7 @@ func TestConvertSpecToInput(t *testing.T) {
 			StorageType:        "bad",
 			Iops:               1000,
 			Password:           crd.PasswordSecret{Name: "password", Key: "mypassword"},
+			DeleteProtection:   true,
 		},
 	}
 	i := convertSpecToInput(db, "mysubnet", []string{"sg-1234", "sg-4321"}, "mypassword")
@@ -37,6 +38,7 @@ func TestConvertSpecToInput(t *testing.T) {
 	assert.Equal(t, 2, len(i.VpcSecurityGroupIds))
 	assert.Equal(t, "bad", *i.StorageType)
 	assert.Equal(t, int64(1000), *i.Iops)
+	assert.Equal(t, true, *i.DeletionProtection)
 }
 
 func TestGetIDFromProvider(t *testing.T) {

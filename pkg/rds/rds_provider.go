@@ -10,20 +10,20 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
-	"github.com/pkg/errors"
 	"github.com/operator-backing-service-samples/aws-rds/pkg/crd"
 	"github.com/operator-backing-service-samples/aws-rds/pkg/kube"
 	"github.com/operator-backing-service-samples/aws-rds/pkg/provider"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 // RDS represents AWS RDS database
 type RDS struct {
-	EC2             *ec2.EC2
-	Subnets         []string
-	SecurityGroups  []string
+	EC2            *ec2.EC2
+	Subnets        []string
+	SecurityGroups []string
 }
 
 // New compiles a new RDS struct based on the CR
@@ -208,6 +208,7 @@ func convertSpecToInput(v *crd.RDSDatabase, subnetName string, securityGroups []
 		StorageEncrypted:      aws.Bool(v.Spec.StorageEncrypted),
 		BackupRetentionPeriod: aws.Int64(v.Spec.BackupRetentionPeriod),
 		Port:                  aws.Int64(9432),
+		DeletionProtection:    aws.Bool(v.Spec.DeleteProtection),
 	}
 	if v.Spec.StorageType != "" {
 		input.StorageType = aws.String(v.Spec.StorageType)
