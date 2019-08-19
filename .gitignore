@@ -78,6 +78,5 @@ tags
 
 # aws-rds related files
 aws-rds
-templates/aws.secret.yaml
 tmp/
 build-timestamp

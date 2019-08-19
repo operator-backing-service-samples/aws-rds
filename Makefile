@@ -173,14 +173,21 @@ clean:
 
 ## -- Install/Delete targets --
 
+.PHONY: -aws-credentials
+-aws-credentials:
+	$(eval AWS_ACCESS_KEY_ID := $(shell cat ~/.aws/credentials | grep aws_access_key_id | cut -d " " -f3))
+	$(eval AWS_SECRET_ACCESS_KEY := $(shell cat ~/.aws/credentials | grep aws_secret_access_key | cut -d " " -f3))
+
 .PHONY: install-operator-secrets
 ## Create secret for operator
-install-operator-secrets:
-	$(Q)sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/aws.secret.yaml | oc apply -f -
+install-operator-secrets: -aws-credentials
+	@sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/aws.secret.yaml | \
+	 sed -e 's,REPLACE_AWS_ACCESS_KEY_ID,$(shell echo -n "$(AWS_ACCESS_KEY_ID)" | base64),g' | \
+	 sed -e 's,REPLACE_AWS_SECRET_ACCESS_KEY,$(shell echo -n "$(AWS_SECRET_ACCESS_KEY)" | base64),g' | oc apply -f -
 
 .PHONY: uninstall-operator-secrets
 ## Delete secret for operator
-uninstall-operator-secrets:
+uninstall-operator-secrets: 
 	$(Q)-sed -e 's,REPLACE_OPERATOR_NAME,$(OPERATOR_NAME),g' $(TEMPLATES_DIR)/aws.secret.yaml | oc delete -f -
 
 .PHONY: install-operator
