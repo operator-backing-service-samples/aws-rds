@@ -167,12 +167,12 @@ spec:
             displayName: DB Username
             path: username
             x-descriptors:
-              - urn:alm:descriptor:servicebindingrequest:env:attribute
+              - binding:env:attribute
           - description: DB Name
             displayName: DB Name
             path: dbName
             x-descriptors:
-              - urn:alm:descriptor:servicebindingrequest:env:attribute
+              - binding:env:attribute
         statusDescriptors:
           - description: Operator status message
             displayName: Operator status message
@@ -185,11 +185,11 @@ spec:
             path: dbCredentials
             x-descriptors:
               - urn:alm:descriptor:io.kubernetes:Secret
-              - urn:alm:descriptor:servicebindingrequest:env:object:secret:DB_PASSWORD
+              - binding:env:object:secret:DB_PASSWORD
           - description: Name of the Config Map to hold the DB connection information
             displayName: DB Connection config
             path: dbConnectionConfig
             x-descriptors:
               - urn:alm:descriptor:io.kubernetes:ConfigMap
-              - urn:alm:descriptor:servicebindingrequest:env:object:configmap:DB_HOST
-              - urn:alm:descriptor:servicebindingrequest:env:object:configmap:DB_PORT
+              - binding:env:object:configmap:DB_HOST
+              - binding:env:object:configmap:DB_PORT
