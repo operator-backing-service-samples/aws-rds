@@ -147,9 +147,6 @@ spec:
                     imagePullPolicy: Always
                     name: REPLACE_OPERATOR_NAME
                 restartPolicy: Always
-                securityContext:
-                  runAsNonRoot: true
-                  runAsUser: 65534
   # CRD(s)
   customresourcedefinitions:
     owned:
