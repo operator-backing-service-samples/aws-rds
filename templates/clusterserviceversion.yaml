@@ -174,9 +174,9 @@ spec:
           - description: Operator status message
             displayName: Operator status message
             path: message
-          - description: Operator status
-            displayName: Operator status
-            path: status
+          - description: Operator state
+            displayName: Operator state
+            path: state
           - description: Name of the Secret to hold the DB user and password
             displayName: DB Password Credentials
             path: dbCredentials
