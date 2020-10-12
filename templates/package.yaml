@@ -1,4 +1,4 @@
 packageName: REPLACE_PACKAGE
 channels:
 - currentCSV: REPLACE_OPERATOR_NAME.vREPLACE_VERSION
-  name: alpha
+  name: beta

@@ -169,7 +169,7 @@ spec:
             displayName: DB Name
             path: dbName
             x-descriptors:
-              - binding:env:attribute
+              - service.binding
         statusDescriptors:
           - description: Operator status message
             displayName: Operator status message
@@ -182,11 +182,10 @@ spec:
             path: dbCredentials
             x-descriptors:
               - urn:alm:descriptor:io.kubernetes:Secret
-              - binding:env:object:secret:DB_PASSWORD
+              - service.binding
           - description: Name of the Config Map to hold the DB connection information
             displayName: DB Connection config
             path: dbConnectionConfig
             x-descriptors:
               - urn:alm:descriptor:io.kubernetes:ConfigMap
-              - binding:env:object:configmap:DB_HOST
-              - binding:env:object:configmap:DB_PORT
+              - service.binding
